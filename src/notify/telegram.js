@@ -29,14 +29,61 @@ function fmtPrice(n) {
   return v.toFixed(digits);
 }
 
-async function sendText(text) {
+/** Постоянная клавиатура внизу чата — кнопки просто отправляют текст команды. */
+const MAIN_KEYBOARD = {
+  reply_markup: {
+    keyboard: [
+      [{ text: '/status' }, { text: '/positions' }],
+      [{ text: '/stop' }, { text: '/start' }],
+      [{ text: '⚙️ Режим' }, { text: '💰 Риск' }],
+    ],
+    resize_keyboard: true,
+    is_persistent: true,
+  },
+};
+
+const MODE_INLINE_KEYBOARD = {
+  reply_markup: {
+    inline_keyboard: [
+      [
+        { text: '📄 Paper', callback_data: 'mode:paper' },
+        { text: '🔴 Live', callback_data: 'mode:live' },
+      ],
+    ],
+  },
+};
+
+const RISK_PRESETS = [3, 5, 8, 10, 15];
+const RISK_INLINE_KEYBOARD = {
+  reply_markup: {
+    inline_keyboard: [RISK_PRESETS.map((v) => ({ text: `${v} USDT`, callback_data: `risk:${v}` }))],
+  },
+};
+
+async function sendText(text, extraOpts = {}) {
   logger.info(`TG: ${text.replace(/\n/g, ' | ')}`);
   if (!bot || !config.telegram.chatId) return;
   try {
-    await bot.sendMessage(config.telegram.chatId, text, { parse_mode: 'HTML' });
+    await bot.sendMessage(config.telegram.chatId, text, { parse_mode: 'HTML', ...extraOpts });
   } catch (err) {
     logger.error('Не удалось отправить сообщение в Telegram', { error: err.message });
   }
+}
+
+/** Показывает/обновляет постоянную клавиатуру с кнопками команд. */
+async function sendMainMenu() {
+  await sendText('Меню команд ниже 👇', MAIN_KEYBOARD);
+}
+
+async function applyMode(mode) {
+  deps.store.setMode(mode);
+  await sendText(`Режим переключён на: <b>${mode}</b>. Примечание: реальная торговля также требует AUTO_TRADE=true в .env.`);
+}
+
+async function applyRisk(value) {
+  deps.store.state.riskUsdOverride = value;
+  deps.store.save();
+  await sendText(`Риск на сделку установлен: ${value} USDT (override поверх RISK_USD_PER_TRADE).`);
 }
 
 function init(injected) {
@@ -76,19 +123,38 @@ function init(injected) {
   bot.onText(/\/start/, async () => {
     deps.store.setStop(false);
     await sendText('▶️ Бот снова разрешает новые входы (STOP снят).');
+    await sendMainMenu();
   });
 
   bot.onText(/\/mode (paper|live)/, async (msg, match) => {
-    const mode = match[1];
-    deps.store.setMode(mode);
-    await sendText(`Режим переключён на: <b>${mode}</b>. Примечание: реальная торговля также требует AUTO_TRADE=true в .env.`);
+    await applyMode(match[1]);
   });
 
   bot.onText(/\/set risk (\d+(\.\d+)?)/, async (msg, match) => {
-    const value = Number(match[1]);
-    deps.store.state.riskUsdOverride = value;
-    deps.store.save();
-    await sendText(`Риск на сделку установлен: ${value} USDT (override поверх RISK_USD_PER_TRADE).`);
+    await applyRisk(Number(match[1]));
+  });
+
+  bot.onText(/^⚙️ Режим$/, async () => {
+    await sendText('Выберите режим:', MODE_INLINE_KEYBOARD);
+  });
+
+  bot.onText(/^💰 Риск$/, async () => {
+    await sendText('Выберите риск на сделку (USDT маржи):', RISK_INLINE_KEYBOARD);
+  });
+
+  bot.on('callback_query', async (query) => {
+    const data = query.data || '';
+    try {
+      if (data.startsWith('mode:')) {
+        await applyMode(data.split(':')[1]);
+      } else if (data.startsWith('risk:')) {
+        await applyRisk(Number(data.split(':')[1]));
+      }
+      await bot.answerCallbackQuery(query.id);
+    } catch (err) {
+      logger.error('Ошибка обработки callback_query', { error: err.message });
+      await bot.answerCallbackQuery(query.id, { text: 'Ошибка, см. логи', show_alert: true }).catch(() => {});
+    }
   });
 
   logger.info('Telegram бот запущен и слушает команды');
@@ -136,6 +202,7 @@ async function notifyError(context, err) {
 module.exports = {
   init,
   sendText,
+  sendMainMenu,
   notifySignal,
   notifyOpened,
   notifyTp1,

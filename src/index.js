@@ -119,6 +119,7 @@ async function main() {
   await notify.sendText(
     `🚀 Бот запущен.\nРежим: <b>${modeLabel()}</b>\nСимулированный аккаунт OKX: ${config.okx.simulated ? 'да' : 'нет'}`
   );
+  await notify.sendMainMenu();
 
   if (!config.autoTrade) {
     await notify.sendText('ℹ️ AUTO_TRADE=false — бот работает в режиме сигналов/paper, реальные ордера отправляться не будут.');
