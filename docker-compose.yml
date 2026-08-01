@@ -1,0 +1,13 @@
+services:
+  scalp-bot:
+    build: .
+    container_name: okx-scalp-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./state:/app/src/state
+    # kill switch внутри контейнера: docker exec okx-scalp-bot touch STOP
+    # либо команда /stop в Telegram (работает всегда, без docker exec)

@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.env
+logs/*.log
+src/state/store.json
+STOP
+.git
+.gitignore
+test
+README.md
+DEPLOY.md

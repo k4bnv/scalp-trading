@@ -1,0 +1,19 @@
+[Unit]
+Description=OKX Early Momentum Scalp Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+WorkingDirectory=/opt/scalp-trading
+EnvironmentFile=/opt/scalp-trading/.env
+ExecStart=/usr/bin/node /opt/scalp-trading/src/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/scalp-trading/logs /opt/scalp-trading/src/state /opt/scalp-trading
+
+[Install]
+WantedBy=multi-user.target

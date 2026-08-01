@@ -1,0 +1,21 @@
+{
+  "name": "okx-early-momentum-scalp-bot",
+  "version": "1.0.0",
+  "description": "Production-ready OKX USDT-SWAP auto-trading bot: Early Momentum Scalp Long + Long/Short crowding filter",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
