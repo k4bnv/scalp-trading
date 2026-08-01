@@ -255,7 +255,8 @@ async function closePositionFully(position, exitPrice, reason) {
   }
 
   store.removeOpenPosition(position.instId);
-  risk.onTradeClosed(store, pnlUsd);
+  const equityUsd = await getEquityUsd();
+  await risk.onTradeClosed(store, pnlUsd, equityUsd || 0);
   store.pushHistory({ instId: position.instId, pnlUsd, reason, mode: position.mode, exitPrice });
   await notify.notifyClosed(position, pnlUsd, reason);
   logger.orderLog({ event: 'closed', instId: position.instId, pnlUsd, reason, exitPrice, mode: position.mode });

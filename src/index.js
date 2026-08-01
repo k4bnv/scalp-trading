@@ -55,9 +55,23 @@ async function getPositionsText() {
     .join('\n');
 }
 
+let apiHaltNotified = false;
+
+async function checkApiHealth() {
+  const halted = okxClient.isHalted();
+  if (halted && !apiHaltNotified) {
+    apiHaltNotified = true;
+    logger.warn('Серия ошибок API OKX превысила порог — сканирование приостановлено');
+    await notify.notifyHalt(`серия ошибок API OKX (>= ${config.guards.apiErrorStreakHalt} подряд) — сканирование и вход приостановлены до восстановления`);
+  } else if (!halted && apiHaltNotified) {
+    apiHaltNotified = false;
+    await notify.sendText('✅ Соединение с OKX API восстановлено, сканирование возобновлено.');
+  }
+  return halted;
+}
+
 async function scanAndEnter() {
-  if (okxClient.isHalted()) {
-    logger.warn('Пропуск цикла сканирования: серия ошибок API OKX превысила порог');
+  if (await checkApiHealth()) {
     return;
   }
 

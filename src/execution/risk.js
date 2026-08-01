@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('../config');
+const notify = require('../notify/telegram');
 
 /** Плечо для сделки: по умолчанию, либо максимум при очень высоком score и хорошей ликвидности. */
 function chooseLeverage(score, instMaxLever, cfg = config.risk) {
@@ -81,16 +82,36 @@ function checkGuards(store, accountEquityUsd, cfg = config) {
   return { allowed: true };
 }
 
-/** Вызывать после закрытия сделки — обновляет daily pnl/streak и, если нужно, включает halt/cooldown. */
-function onTradeClosed(store, pnlUsd, cfg = config) {
+/**
+ * Вызывать после закрытия сделки — обновляет daily pnl/streak и, если нужно,
+ * включает halt/cooldown и шлёт причину в Telegram (без спама — halt ставится один раз за день).
+ */
+async function onTradeClosed(store, pnlUsd, accountEquityUsd = 0, cfg = config) {
   store.recordTradeClosed({ pnlUsd });
 
   const daily = store.state.daily;
+
   if (daily.consecutiveLosses >= cfg.guards.cooldownAfterLosses) {
     store.startCooldown(cfg.guards.cooldownMinutes);
+    await notify.notifyHalt(
+      `${daily.consecutiveLosses} убытка(ов) подряд — cooldown на ${cfg.guards.cooldownMinutes} мин, новые входы приостановлены`
+    );
   }
-  if (daily.pnlUsd <= -cfg.guards.dailyLossLimitUsd) {
-    store.haltForToday(`дневной убыток ${daily.pnlUsd.toFixed(2)} USDT`);
+
+  if (!daily.haltedUntilTomorrow) {
+    let reason = null;
+    if (daily.pnlUsd <= -cfg.guards.dailyLossLimitUsd) {
+      reason = `дневной убыток ${daily.pnlUsd.toFixed(2)} USDT достиг лимита -${cfg.guards.dailyLossLimitUsd}`;
+    } else if (accountEquityUsd > 0) {
+      const lossPct = (-daily.pnlUsd / accountEquityUsd) * 100;
+      if (lossPct >= cfg.guards.dailyLossLimitPct) {
+        reason = `дневной убыток ${lossPct.toFixed(1)}% достиг лимита ${cfg.guards.dailyLossLimitPct}%`;
+      }
+    }
+    if (reason) {
+      store.haltForToday(reason);
+      await notify.notifyHalt(`${reason}. Новые входы запрещены до следующего дня.`);
+    }
   }
 }
 
