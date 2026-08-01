@@ -8,7 +8,7 @@ RUN npm ci --omit=dev
 COPY src ./src
 COPY .env.example ./.env.example
 
-RUN mkdir -p logs data src/state
+RUN mkdir -p logs data
 
 ENV NODE_ENV=production
 

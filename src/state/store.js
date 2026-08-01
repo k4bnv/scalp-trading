@@ -4,8 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const logger = require('../util/logger');
 
-const STORE_PATH = path.join(__dirname, 'store.json');
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const STORE_PATH = path.join(DATA_DIR, 'store.json');
 const STOP_FLAG_PATH = path.join(__dirname, '..', '..', 'STOP');
+
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);

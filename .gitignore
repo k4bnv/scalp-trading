@@ -1,9 +1,7 @@
 node_modules/
 .env
 logs/*.log
-src/state/store.json
 STOP
-/state/
 /data/*
 !/data/.gitkeep
 .claude/

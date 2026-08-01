@@ -2,7 +2,7 @@ node_modules
 npm-debug.log
 .env
 logs/*.log
-src/state/store.json
+data/store.json
 STOP
 .git
 .gitignore

@@ -8,6 +8,6 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
-      - ./state:/app/src/state
+    # состояние бота (открытые позиции, дневные лимиты) хранится в ./data/store.json
     # kill switch внутри контейнера: docker exec okx-scalp-bot touch STOP
     # либо команда /stop в Telegram (работает всегда, без docker exec)
