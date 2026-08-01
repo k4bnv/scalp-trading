@@ -11,7 +11,7 @@ try {
 }
 
 let bot = null;
-let deps = null; // { store, getStatusText, getPositionsText, closeAllPositions, setAutoTradeOverride, setRiskOverride }
+let deps = null; // { store, getStatusText, getPositionsText, getStatsText, closeAllPositions }
 
 function fmt(n, digits = 2) {
   return Number(n).toFixed(digits);
@@ -34,8 +34,9 @@ const MAIN_KEYBOARD = {
   reply_markup: {
     keyboard: [
       [{ text: '/status' }, { text: '/positions' }],
-      [{ text: '/stop' }, { text: '/start' }],
-      [{ text: '⚙️ Режим' }, { text: '💰 Риск' }],
+      [{ text: '/stats' }, { text: '/stop' }],
+      [{ text: '/start' }, { text: '⚙️ Режим' }],
+      [{ text: '💰 Риск' }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -105,6 +106,11 @@ function init(injected) {
 
   bot.onText(/\/positions/, async () => {
     const text = deps.getPositionsText ? await deps.getPositionsText() : 'нет открытых позиций';
+    await sendText(text);
+  });
+
+  bot.onText(/\/stats/, async () => {
+    const text = deps.getStatsText ? await deps.getStatsText() : 'статистика недоступна';
     await sendText(text);
   });
 

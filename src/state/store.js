@@ -23,11 +23,14 @@ function defaultState() {
     daily: {
       date: todayStr(),
       trades: 0,
+      wins: 0,
+      losses: 0,
       pnlUsd: 0,
       consecutiveLosses: 0,
       cooldownUntilTs: null,
       haltedUntilTomorrow: false,
     },
+    lastDailySummary: null,
     openPositions: {},
     history: [],
     seenClOrdIds: [],
@@ -66,10 +69,21 @@ class Store {
   _rolloverDayIfNeeded() {
     const today = todayStr();
     if (this.state.daily.date !== today) {
+      this.state.lastDailySummary = this.state.daily;
       this.state.daily = { ...defaultState().daily, date: today };
       this.save();
       logger.info('Новый торговый день — дневные счётчики сброшены');
     }
+  }
+
+  /** Забирает сводку по последнему завершившемуся дню (один раз — для отчёта в Telegram). */
+  consumeLastDailySummary() {
+    const summary = this.state.lastDailySummary;
+    if (summary) {
+      this.state.lastDailySummary = null;
+      this.save();
+    }
+    return summary;
   }
 
   // --- kill switch ---
@@ -123,8 +137,10 @@ class Store {
     this.state.daily.trades += 1;
     this.state.daily.pnlUsd += pnlUsd;
     if (pnlUsd < 0) {
+      this.state.daily.losses += 1;
       this.state.daily.consecutiveLosses += 1;
     } else {
+      this.state.daily.wins += 1;
       this.state.daily.consecutiveLosses = 0;
     }
     this.save();

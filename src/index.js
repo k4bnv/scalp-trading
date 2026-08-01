@@ -55,6 +55,46 @@ async function getPositionsText() {
     .join('\n');
 }
 
+async function getStatsText(n = 20) {
+  const trades = store.getRecentHistory(n);
+  if (!trades.length) return 'История сделок пока пуста.';
+
+  const wins = trades.filter((t) => t.pnlUsd > 0);
+  const losses = trades.filter((t) => t.pnlUsd <= 0);
+  const totalPnl = trades.reduce((s, t) => s + t.pnlUsd, 0);
+  const avgPnl = totalPnl / trades.length;
+  const winRate = (wins.length / trades.length) * 100;
+  const best = trades.reduce((a, b) => (b.pnlUsd > a.pnlUsd ? b : a));
+  const worst = trades.reduce((a, b) => (b.pnlUsd < a.pnlUsd ? b : a));
+
+  return [
+    `<b>Статистика по последним ${trades.length} сделкам</b>`,
+    `винрейт: ${winRate.toFixed(0)}% (${wins.length}W / ${losses.length}L)`,
+    `суммарный PnL: ${totalPnl.toFixed(2)} USDT`,
+    `средний PnL: ${avgPnl.toFixed(2)} USDT`,
+    `лучшая: ${best.instId} ${best.pnlUsd.toFixed(2)} USDT`,
+    `худшая: ${worst.instId} ${worst.pnlUsd.toFixed(2)} USDT`,
+  ].join('\n');
+}
+
+function dailySummaryText(daily) {
+  const winRate = daily.trades > 0 ? (daily.wins / daily.trades) * 100 : 0;
+  const lines = [
+    `📅 <b>Итоги дня ${daily.date}</b>`,
+    `сделок: ${daily.trades} (${daily.wins}W / ${daily.losses}L${daily.trades ? `, винрейт ${winRate.toFixed(0)}%` : ''})`,
+    `PnL за день: ${daily.pnlUsd.toFixed(2)} USDT`,
+  ];
+  if (daily.haltedUntilTomorrow) lines.push(`⛔ был halt: ${daily.haltReason}`);
+  return lines.join('\n');
+}
+
+async function checkDailySummary() {
+  const summary = store.consumeLastDailySummary();
+  if (summary && summary.trades > 0) {
+    await notify.sendText(dailySummaryText(summary));
+  }
+}
+
 let apiHaltNotified = false;
 
 async function checkApiHealth() {
@@ -114,6 +154,11 @@ async function manageLoop() {
   } catch (err) {
     logger.error('Ошибка цикла управления позициями', { error: err.message });
   }
+  try {
+    await checkDailySummary();
+  } catch (err) {
+    logger.error('Ошибка проверки дневной сводки', { error: err.message });
+  }
 }
 
 async function main() {
@@ -127,6 +172,7 @@ async function main() {
     store,
     getStatusText,
     getPositionsText,
+    getStatsText,
     closeAllPositions: (reason) => trader.closeAllPositions(reason),
   });
 
