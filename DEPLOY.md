@@ -20,8 +20,19 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-Данные переживают пересоздание контейнера — `logs/`, `data/` и
-`state/` (JSON-стейт позиций/дневных лимитов) примонтированы с хоста.
+Данные переживают пересоздание контейнера, redeploy и повторный
+клон репозитория (например, в Coolify/Dokploy/аналогах) — логи и
+`state/store.json` (позиции, дневные лимиты) хранятся в именованных
+Docker-томах `bot-logs` и `bot-data`, а не в папке чекаута. Посмотреть
+их:
+
+```bash
+docker volume ls | grep bot-
+docker exec okx-scalp-bot cat /app/data/store.json
+```
+
+Тома удаляются только явно (`docker compose down -v`), обычный
+`down`/`up` или пересборка их не трогают.
 
 Остановить новые входы без остановки контейнера:
 
@@ -87,4 +98,6 @@ sizing). Держите его зелёным перед деплоем боев
 4. Только затем `OKX_SIMULATED=false` с боевыми ключами и минимальным
    `RISK_USD_PER_TRADE`.
 
-На каждом шаге проверяйте `/status` в Telegram и `logs/*.log`.
+На каждом шаге проверяйте `/status` в Telegram и `docker compose logs -f`
+(вариант Docker) или `journalctl -u okx-scalp-bot -f` / `logs/*.log`
+(вариант systemd).

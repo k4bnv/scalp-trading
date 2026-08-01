@@ -6,8 +6,12 @@ services:
     env_file:
       - .env
     volumes:
-      - ./logs:/app/logs
-      - ./data:/app/data
-    # состояние бота (открытые позиции, дневные лимиты) хранится в ./data/store.json
+      - bot-logs:/app/logs
+      - bot-data:/app/data
+    # состояние бота (открытые позиции, дневные лимиты) хранится в /app/data/store.json
     # kill switch внутри контейнера: docker exec okx-scalp-bot touch STOP
     # либо команда /stop в Telegram (работает всегда, без docker exec)
+
+volumes:
+  bot-logs:
+  bot-data:
